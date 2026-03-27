@@ -10,6 +10,7 @@
     "import/no-unassigned-import": "off",
     "react/jsx-key": "error",
     "react/react-in-jsx-scope": "off",
+    "unicorn/no-array-sort": "off",
     "unicorn/require-module-specifiers": "off"
   }
 }

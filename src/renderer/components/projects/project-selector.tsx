@@ -1,19 +1,27 @@
-import { ChevronDown, Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2 } from "lucide-react";
 
 import type { Project } from "../../../shared/types";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const ProjectSelector = ({
   projects,
   activeProjectId,
   onSelect,
-  onOpenSettings,
+  onCreateProject,
+  onEditProject,
 }: {
   projects: Project[];
   activeProjectId: string | null | undefined;
   onSelect: (projectId: string | null) => void;
-  onOpenSettings: () => void;
+  onCreateProject: () => void;
+  onEditProject: () => void;
 }) => (
   <div className="space-y-3">
     <div className="flex items-center justify-between">
@@ -21,28 +29,32 @@ export const ProjectSelector = ({
         Projects
       </p>
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="ghost" onClick={onOpenSettings}>
+        <Button size="sm" variant="ghost" onClick={onEditProject}>
           <Settings2 className="h-4 w-4" />
         </Button>
-        <Button size="sm" onClick={onOpenSettings}>
+        <Button size="sm" onClick={onCreateProject}>
           <Plus className="mr-2 h-4 w-4" />
           New
         </Button>
       </div>
     </div>
-    <div className="relative">
+    <div>
       <Select
-        value={activeProjectId ?? ""}
-        onChange={(event) => onSelect(event.target.value || null)}
+        value={activeProjectId ?? "__none__"}
+        onValueChange={(value: string) => onSelect(value === "__none__" ? null : value)}
       >
-        <option value="">Select a project</option>
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
+        <SelectTrigger>
+          <SelectValue placeholder="Select a project" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">Select a project</SelectItem>
+          {projects.map((project) => (
+            <SelectItem key={project.id} value={project.id}>
+              {project.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-[color:var(--muted-foreground)]" />
     </div>
   </div>
 );

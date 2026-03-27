@@ -1,43 +1,53 @@
 import { RefreshCw } from "lucide-react";
 
-import type { TraceRecord } from "../../../shared/types";
+import type { TraceFilters, TraceRecord } from "../../../shared/types";
+import { TraceFiltersBar } from "@/components/traces/trace-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const formatLatency = (value?: number) => {
-  if (!value) {
-    return "n/a";
-  }
+const formatLatency = (value?: number) => (value ? `${Math.round(value)} ms` : "n/a");
 
-  return `${Math.round(value)} ms`;
-};
+const loadingRows = Array.from({ length: 6 });
 
 export const TraceList = ({
   traces,
   selectedTraceIds,
-  isLoading,
+  activeTraceId,
+  isInitialLoading,
+  isRefreshing,
+  error,
+  filters,
+  phoenixProjectNames,
+  onChangeFilters,
   onToggleTrace,
+  onOpenTrace,
   onAnalyze,
   onRefresh,
 }: {
   traces: TraceRecord[];
   selectedTraceIds: string[];
-  isLoading: boolean;
+  activeTraceId: string | null;
+  isInitialLoading: boolean;
+  isRefreshing: boolean;
+  error?: string | null;
+  filters: TraceFilters;
+  phoenixProjectNames: string[];
+  onChangeFilters: (filters: TraceFilters) => void;
   onToggleTrace: (traceId: string) => void;
+  onOpenTrace: (traceId: string) => void;
   onAnalyze: () => void;
   onRefresh: () => void;
 }) => (
   <Card className="h-full overflow-hidden">
-    <CardHeader className="border-b border-white/10">
+    <CardHeader className="border-b">
       <div className="flex items-start justify-between gap-4">
         <div>
           <CardTitle>Live Phoenix traces</CardTitle>
           <CardDescription>
-            Poll Phoenix through the main-process proxy, then promote selected traces into chat
-            context.
+            Poll Phoenix through the main-process proxy, inspect span trees, then promote selected traces into chat context.
           </CardDescription>
         </div>
         <div className="flex items-center gap-2">
@@ -51,21 +61,26 @@ export const TraceList = ({
         </div>
       </div>
     </CardHeader>
+    <TraceFiltersBar
+      filters={filters}
+      phoenixProjectNames={phoenixProjectNames}
+      onChange={onChangeFilters}
+    />
     <CardContent className="p-0">
-      <div className="max-h-[calc(100vh-20rem)] overflow-auto">
-        <div className="grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b border-white/10 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+      {error ? (
+        <div className="border-b bg-red-500/10 px-6 py-3 text-sm text-red-300">{error}</div>
+      ) : null}
+      <div className="max-h-[calc(100vh-22rem)] overflow-auto">
+        <div className="grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <span></span>
           <span>Trace</span>
           <span>Started</span>
           <span>Status</span>
           <span>Latency</span>
         </div>
-        {isLoading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <div
-                className="grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 px-5 py-4"
-                key={index}
-              >
+        {isInitialLoading
+          ? loadingRows.map((_, index) => (
+              <div className="grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 px-6 py-4" key={index}>
                 <Skeleton className="h-4 w-4" />
                 <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-4 w-28" />
@@ -74,34 +89,32 @@ export const TraceList = ({
               </div>
             ))
           : traces.map((trace) => (
-              <label
-                className="grid cursor-pointer grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b border-white/5 px-5 py-4 text-sm hover:bg-white/3"
+              <div
+                className={`grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b px-6 py-4 text-sm ${activeTraceId === trace.traceId ? "bg-accent/50" : "hover:bg-accent/20"}`}
                 key={trace.traceId}
               >
                 <Checkbox
                   checked={selectedTraceIds.includes(trace.traceId)}
                   onCheckedChange={() => onToggleTrace(trace.traceId)}
                 />
-                <div className="min-w-0">
+                <button className="min-w-0 text-left" onClick={() => onOpenTrace(trace.traceId)} type="button">
                   <p className="truncate font-medium">{trace.rootSpanName ?? trace.traceId}</p>
-                  <p className="truncate text-xs text-[color:var(--muted-foreground)]">
-                    {trace.traceId}
-                  </p>
-                </div>
-                <span className="text-[color:var(--muted-foreground)]">
+                  <p className="truncate text-xs text-muted-foreground">{trace.traceId}</p>
+                </button>
+                <span className="text-muted-foreground">
                   {trace.startTime ? new Date(trace.startTime).toLocaleTimeString() : "n/a"}
                 </span>
                 <div>
-                  <Badge>{trace.statusCode ?? "unknown"}</Badge>
+                  <Badge variant={trace.statusCode === "ERROR" ? "destructive" : "outline"}>
+                    {trace.statusCode ?? "unknown"}
+                  </Badge>
                 </div>
-                <span className="text-[color:var(--muted-foreground)]">
-                  {formatLatency(trace.latencyMs)}
-                </span>
-              </label>
+                <span className="text-muted-foreground">{formatLatency(trace.latencyMs)}</span>
+              </div>
             ))}
-        {!isLoading && traces.length === 0 ? (
-          <div className="px-5 py-10 text-center text-sm text-[color:var(--muted-foreground)]">
-            No traces yet. Make sure the active Phoenix project is reachable through the proxy.
+        {!isInitialLoading && traces.length === 0 ? (
+          <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+            No traces match the current filters. Try changing the sort, status, or search query.
           </div>
         ) : null}
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import type { Project, ProjectInput } from "../../../shared/types";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const emptyProject: ProjectInput = {
   name: "",
@@ -34,8 +41,13 @@ export const ConnectionSettings = ({
   onSave: (input: ProjectInput, projectId?: string) => Promise<void>;
 }) => {
   const [form, setForm] = useState<ProjectInput>(emptyProject);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    if (!open) {
+      setIsSaving(false);
+    }
+
     if (!project) {
       setForm(emptyProject);
       return;
@@ -50,7 +62,36 @@ export const ConnectionSettings = ({
       llmModel: project.llmModel,
       tracePollingInterval: project.tracePollingInterval,
     });
-  }, [project]);
+  }, [open, project]);
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error("Project name is required");
+      return;
+    }
+
+    if (!form.phoenixUrl.trim()) {
+      toast.error("Phoenix URL is required");
+      return;
+    }
+
+    if (!form.llmApiKey.trim()) {
+      toast.error("LLM API key is required");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await onSave(form, project?.id);
+      toast.success(project ? "Project updated" : "Project created");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save project";
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,17 +133,21 @@ export const ConnectionSettings = ({
               <span>LLM provider</span>
               <Select
                 value={form.llmProvider}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setForm({
                     ...form,
-                    llmProvider: event.target.value as Project["llmProvider"],
-                    llmModel:
-                      event.target.value === "anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o",
+                    llmProvider: value as Project["llmProvider"],
+                    llmModel: value === "anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o",
                   })
                 }
               >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                </SelectContent>
               </Select>
             </label>
             <label className="grid gap-2 text-sm">
@@ -137,7 +182,9 @@ export const ConnectionSettings = ({
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => void onSave(form, project?.id)}>Save project</Button>
+            <Button disabled={isSaving} onClick={() => void handleSave()}>
+              {isSaving ? "Saving..." : "Save project"}
+            </Button>
           </div>
         </div>
       </DialogContent>

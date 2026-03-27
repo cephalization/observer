@@ -20,7 +20,14 @@ const store = new Store<StoreShape>({
 
 const now = () => new Date().toISOString();
 
-const normalizeUrl = (value: string) => value.trim().replace(/\/+$/, "");
+const normalizeUrl = (value: string) => {
+  const trimmed = value.trim();
+  const withScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(trimmed)
+    ? trimmed
+    : `http://${trimmed}`;
+
+  return withScheme.replace(/\/+$/, "");
+};
 
 const createId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

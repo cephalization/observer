@@ -45,6 +45,7 @@ export interface ProjectUpdate extends Partial<ProjectInput> {
 }
 
 export interface TraceRecord {
+  id?: string;
   traceId: string;
   projectName?: string;
   statusCode?: string;
@@ -53,6 +54,31 @@ export interface TraceRecord {
   latencyMs?: number;
   rootSpanName?: string;
   raw: unknown;
+}
+
+export interface SpanRecord {
+  id?: string;
+  traceId: string;
+  spanId: string;
+  parentSpanId?: string | null;
+  name: string;
+  spanKind?: string;
+  statusCode?: string;
+  statusMessage?: string;
+  startTime?: string;
+  endTime?: string;
+  durationMs?: number;
+  attributes?: Record<string, unknown>;
+  events?: Array<Record<string, unknown>>;
+  raw: unknown;
+}
+
+export interface TraceFilters {
+  projectName: string;
+  search: string;
+  status: "all" | "ok" | "error" | "unset";
+  sort: "start_time" | "latency_ms";
+  order: "asc" | "desc";
 }
 
 export interface ChatMessage {

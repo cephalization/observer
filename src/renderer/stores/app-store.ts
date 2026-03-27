@@ -1,8 +1,10 @@
 import { create } from "zustand";
 
 interface AppStore {
+  activeTraceId: string | null;
   selectedTraceIds: string[];
   settingsOpen: boolean;
+  setActiveTraceId: (traceId: string | null) => void;
   setSelectedTraceIds: (traceIds: string[]) => void;
   toggleTrace: (traceId: string) => void;
   clearSelection: () => void;
@@ -10,8 +12,10 @@ interface AppStore {
 }
 
 export const useAppStore = create<AppStore>((set) => ({
+  activeTraceId: null,
   selectedTraceIds: [],
   settingsOpen: false,
+  setActiveTraceId: (activeTraceId) => set({ activeTraceId }),
   setSelectedTraceIds: (selectedTraceIds) => set({ selectedTraceIds }),
   toggleTrace: (traceId) =>
     set((state) => ({

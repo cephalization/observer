@@ -27,6 +27,15 @@ const setErrorState = (error: string | null) => {
   state.error = error;
 };
 
+const normalizePhoenixUrl = (value: string) => {
+  const trimmed = value.trim();
+  const withScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(trimmed)
+    ? trimmed
+    : `http://${trimmed}`;
+
+  return withScheme.replace(/\/+$/, "");
+};
+
 const buildHeaders = (project: Project, request: Request) => {
   const headers = new Headers();
 
@@ -45,6 +54,7 @@ const buildHeaders = (project: Project, request: Request) => {
 
 const createProxyApp = (project: Project) => {
   const app = new Hono();
+  const phoenixUrl = normalizePhoenixUrl(project.phoenixUrl);
 
   app.use(
     "*",
@@ -61,7 +71,7 @@ const createProxyApp = (project: Project) => {
   });
 
   app.get("/arize_phoenix_version", async (context) => {
-    const response = await fetch(`${project.phoenixUrl}/arize_phoenix_version`, {
+    const response = await fetch(`${phoenixUrl}/arize_phoenix_version`, {
       headers: buildHeaders(project, context.req.raw),
     });
 
@@ -73,7 +83,7 @@ const createProxyApp = (project: Project) => {
 
   app.all("/v1/*", async (context) => {
     const url = new URL(context.req.url);
-    const targetUrl = `${project.phoenixUrl}${url.pathname}${url.search}`;
+    const targetUrl = `${phoenixUrl}${url.pathname}${url.search}`;
     const method = context.req.method;
     const headers = buildHeaders(project, context.req.raw);
     const body =
