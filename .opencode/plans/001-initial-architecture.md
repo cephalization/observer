@@ -8,27 +8,37 @@ Observer is an Electron application for monitoring and analyzing Arize Phoenix t
 
 Status as of 2026-03-27:
 
-- Completed the initial scaffold for phases 1 through 7 enough to run the app end-to-end in development
-- Verified `pnpm typecheck`, `pnpm check`, and `pnpm start`
-- Fixed the Forge main-entry mismatch by pointing `package.json` at `.vite/build/index.js`
+- Completed phases 1 through 7 in working form and finished a substantial portion of phase 8 polish
+- Verified repeated checkpoints with `pnpm typecheck`, `pnpm check`, and `pnpm start`
+- Fixed the Electron Forge entrypoint collision by renaming the built main/preload entries to `main.ts` and `preload.ts`
+- Added persisted desktop panel layouts so the resizable workspace restores across app restarts
 
 Implemented now:
 
 - React 19 renderer bootstrap with `src/renderer/main.tsx` and `src/renderer/App.tsx`
 - TypeScript 6 project split with `tsconfig.app.json` and `tsconfig.node.json`
 - oxlint + oxfmt tooling, Vite React renderer config, Tailwind 4 styling, and `components.json`
+- Official shadcn CLI-generated UI primitives for the active component set, plus `components.json`
 - Electron main/preload split with typed `window.observer` bridge
 - `electron-store` persistence for projects and theme preference
 - Hono-based localhost proxy for Phoenix REST + OTEL export, including `/health` and `/arize_phoenix_version`
-- Phoenix polling via `@arizeai/phoenix-client/traces` wrapped with TanStack Query
+- Direct Phoenix REST querying via the proxy for project discovery, traces, and spans
 - Browser OTEL initialization with `WebTracerProvider`, OTLP HTTP exporter, and OpenInference span processing
 - Direct renderer-side AI SDK chat with telemetry enabled and selected-trace context injection
 - Zustand-backed selection/settings UI and a functional single-page shell
+- Phoenix project discovery filter so local Phoenix instances can be explored without matching the app project name
+- Silent background polling refreshes that keep the trace list stable while new traces stream in
+- Trace detail inspector with span tree, selected span state, and richer detail views
+- Nested desktop resizable layout for sidebar, traces, detail, and chat panels with restored layout state
+- Ongoing layout polish toward a Spotify-like sectioned workspace with gap-based resize seams
+- Overflow cleanup so the trace list, trace detail, and chat panels each have clearer primary scroll regions
 
 Still remaining / follow-up:
 
-- Replace the hand-authored shadcn-style primitives with official generated shadcn components if desired
-- Add richer Phoenix trace detail views and filtering beyond the current list/table view
+- Split `src/renderer/App.tsx` into smaller desktop/mobile shell components
+- Continue deepening the trace inspector with additional event/attribute ergonomics and richer summaries
+- Continue polishing overflow, density, and scrollbar ergonomics across the desktop workspace
+- Add pagination or time-range controls for very large Phoenix projects
 - Harden chat state handling and proxy lifecycle further as we add real usage paths
 - Resolve remaining non-blocking oxlint warnings around function size and a few style preferences
 
@@ -51,7 +61,7 @@ Still remaining / follow-up:
 | Proxy server           | Hono (in main process)                                     | Lightweight, TypeScript-native                  |
 | Vite version           | Highest compatible with @electron-forge/plugin-vite (^5.x) | Forge plugin tested against Vite 5              |
 | Theme                  | System/dark/light with persistence in electron-store       | shadcn theming                                  |
-| Layout                 | Single-page with sidebar panels                            | No router needed                                |
+| Layout                 | Single-page with nested resizable panels                   | No router needed                                |
 | Trace context for chat | Checkbox selection + "Analyze" button                      | User picks traces, injected as system context   |
 | Polling interval       | Configurable in UI                                         | User sets refresh rate                          |
 
@@ -120,19 +130,18 @@ The renderer uses the browser OTEL SDK to trace AI SDK chat completions:
 6. Exporter points to `http://127.0.0.1:<proxy-port>/v1/traces`
 7. Provider is re-initialized when switching projects (new port, new project name)
 
-### Phoenix Client (Browser-Compatible)
+### Phoenix Data Access
 
-Research confirmed @arizeai/phoenix-client works in browser contexts:
+Research confirmed `@arizeai/phoenix-client` works in browser contexts, but the implementation has since shifted toward direct REST access through the local proxy because it is simpler to debug against local Phoenix instances:
 
-- Core client uses `openapi-fetch` (standard fetch)
-- Environment variable reading gracefully degrades (returns {} when no process.env)
-- All sub-modules except `/experiments` are browser-safe
-- `/experiments` imports Node.js-only OTEL packages -- do NOT import in renderer
-- Wrap with TanStack Query for polling/caching
+- Project discovery uses `/v1/projects`
+- Trace discovery uses `/v1/projects/:projectName/traces`
+- Span detail uses `/v1/projects/:projectName/spans?trace_ids=...`
+- TanStack Query still handles polling/caching around these calls
 
 ### Data Flow: Chat with Trace Context
 
-1. User views trace list (polled via phoenix-client + TanStack Query)
+1. User views trace list (polled via direct Phoenix REST calls + TanStack Query)
 2. User selects traces via checkboxes
 3. User clicks "Analyze" button
 4. Selected trace data serialized into system message context
@@ -181,27 +190,24 @@ observer/
 +-- index.html
 +-- src/
     +-- main/
-    |   +-- index.ts           # Electron main process entry
+    |   +-- main.ts            # Electron main process entry
     |   +-- proxy.ts           # Hono proxy server
     |   +-- store.ts           # electron-store setup
     |   +-- ipc.ts             # IPC handler registration
     +-- preload/
-    |   +-- index.ts           # contextBridge API
+    |   +-- preload.ts         # contextBridge API
     +-- renderer/
     |   +-- main.tsx           # React entry point
     |   +-- App.tsx            # Root with providers (QueryClient, Zustand, Theme)
     |   +-- index.css          # Tailwind imports
     |   +-- lib/
     |   |   +-- otel.ts        # Browser OTEL init/reinit
-    |   |   +-- phoenix.ts     # Phoenix client wrapper (createClient + proxy URL)
+    |   |   +-- phoenix.ts     # Phoenix REST wrappers via proxy URL
     |   |   +-- ai.ts          # AI SDK provider factory (openai/anthropic)
     |   |   +-- utils.ts       # Shared utilities
     |   +-- hooks/
     |   |   +-- use-phoenix-traces.ts   # TanStack Query: trace polling
-    |   |   +-- use-phoenix-projects.ts # TanStack Query: Phoenix project data
     |   |   +-- use-chat.ts             # AI SDK chat with streaming + trace context
-    |   |   +-- use-proxy.ts            # Proxy status/lifecycle via IPC
-    |   |   +-- use-electron-store.ts   # Generic IPC hook for store operations
     |   +-- stores/
     |   |   +-- app-store.ts   # Zustand: active project, UI state, selected traces
     |   +-- components/
@@ -215,8 +221,8 @@ observer/
     |   |   |   +-- connection-settings.tsx
     |   |   +-- traces/
     |   |   |   +-- trace-list.tsx
-    |   |   |   +-- trace-detail.tsx
-    |   |   |   +-- trace-filters.tsx
+    |   |   |   +-- trace-detail.tsx    # Span tree + attributes/events tabs
+    |   |   |   +-- trace-filters.tsx   # Search, Phoenix project, status, sort, order
     |   |   +-- chat/
     |   |   |   +-- chat-interface.tsx
     |   |   |   +-- message-list.tsx
@@ -318,7 +324,7 @@ Status: completed
 
 ### Phase 3: Electron IPC, Preload, Proxy, Store
 
-Status: completed for initial development workflow
+Status: completed
 
 1. Install electron-store, hono
 2. Create src/main/store.ts (electron-store schema for projects + preferences)
@@ -341,7 +347,7 @@ Status: completed for initial development workflow
 
 ### Phase 4: Phoenix Client + Trace Polling
 
-Status: completed for project-scoped trace polling
+Status: completed with direct REST access through the proxy
 
 1. Install @arizeai/phoenix-client, @tanstack/react-query
 2. Create src/renderer/lib/phoenix.ts
@@ -355,8 +361,8 @@ Status: completed for project-scoped trace polling
    - Depends on proxyPort being available
 5. Build trace list UI
    - TraceList: table with checkbox selection, timestamp, name, status, duration
-   - TraceDetail: expandable panel showing span tree, attributes, timing
-   - TraceFilters: date range, status filter, search
+   - TraceDetail: panel showing span tree, selected span details, attributes, and events
+   - TraceFilters: Phoenix project, status, sort, order, search
 6. Add polling interval control to UI
 
 ### Phase 5: Browser OTEL Setup
@@ -415,6 +421,21 @@ Status: completed for create/update/activate flows
 ### Phase 8: Polish & Status UI
 
 Status: partially completed
+
+Completed here:
+
+- Responsive mobile stacked layout and desktop nested resizable layout
+- Persisted panel sizes across restarts using `useDefaultLayout`
+- Silent background polling so traces update without resetting the list UI
+- Connection status/proxy indicator in the sidebar
+- Initial Spotify-inspired panel polish and scroll-container cleanup
+
+Remaining here:
+
+- More trace-inspector polish and ergonomics
+- Better narrow-width behavior for the trace list controls and columns
+- Refactor the large `App.tsx` shell into smaller components
+- Final scrollbar/overflow density pass after more real usage
 
 1. Create ConnectionStatus component
    - Shows Phoenix URL (from project config, not proxy URL)

@@ -36,14 +36,14 @@ export const ChatInterface = ({
   const [value, setValue] = useState("");
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
-      <CardHeader className="border-b border-white/10">
+    <Card className="flex h-full min-h-0 flex-col overflow-hidden py-4">
+      <CardHeader className="border-b border-white/8 pb-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Trace analysis chat</CardTitle>
-            <CardDescription>
-              Stream model output directly in the renderer while telemetry exports route to Phoenix
-              through the proxy.
+            <CardDescription className="max-w-[32rem] leading-5">
+              Stream model output in the renderer while telemetry exports route to Phoenix through
+              the proxy.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -64,14 +64,14 @@ export const ChatInterface = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-5">
-        <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-[color:var(--muted-foreground)]">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-5 pt-4">
+        <div className="rounded-2xl border border-dashed border-white/8 bg-black/20 px-4 py-2.5 text-sm text-[color:var(--muted-foreground)]">
           Selected traces in context:{" "}
           <span className="font-semibold text-[color:var(--foreground)]">{selectedTraceCount}</span>
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-auto pr-1">
           {messages.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/3 px-4 py-5 text-sm text-[color:var(--muted-foreground)]">
+              <div className="rounded-2xl border border-white/8 bg-white/3 px-4 py-5 text-sm text-[color:var(--muted-foreground)]">
               Ask the model to summarize, compare, or critique selected traces. Observer will stream
               the response and trace the completion back into Phoenix.
             </div>

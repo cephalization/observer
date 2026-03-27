@@ -35,6 +35,12 @@ const defaultFilters: TraceFilters = {
   order: "desc",
 };
 
+const layoutIds = {
+  main: "observer-main-layout-v2",
+  right: "observer-right-layout-v2",
+  root: "observer-root-layout-v2",
+};
+
 const matchesTraceFilters = (trace: TraceRecord, filters: TraceFilters) => {
   const haystack = `${trace.rootSpanName ?? ""} ${trace.traceId}`.toLowerCase();
   const matchesSearch = haystack.includes(filters.search.trim().toLowerCase());
@@ -68,15 +74,15 @@ export default function App() {
   const [traceFilters, setTraceFilters] = useState<TraceFilters>(defaultFilters);
   const [settingsProject, setSettingsProject] = useState<Project | null>(null);
   const rootLayout = useDefaultLayout({
-    id: "observer-root-layout",
+    id: layoutIds.root,
     panelIds: ["observer-sidebar-panel", "observer-workspace-panel"],
   });
   const mainLayout = useDefaultLayout({
-    id: "observer-main-layout",
+    id: layoutIds.main,
     panelIds: ["observer-traces-panel", "observer-inspector-panel"],
   });
   const rightLayout = useDefaultLayout({
-    id: "observer-right-layout",
+    id: layoutIds.right,
     panelIds: ["observer-detail-panel", "observer-chat-panel"],
   });
 
@@ -160,7 +166,7 @@ export default function App() {
   };
 
   const sidebar = (
-    <aside className="flex h-full min-h-0 flex-col border-r border-white/10 bg-black/20 p-6 backdrop-blur-xl xl:border-r-0">
+    <aside className="flex h-full min-h-0 flex-col rounded-[24px] bg-black/35 p-6 pt-16 backdrop-blur-xl xl:pt-18">
       <div className="mb-8 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
           Observer
@@ -190,7 +196,7 @@ export default function App() {
 
       <div className="space-y-4">
         <ConnectionStatus phoenixUrl={activeProject?.phoenixUrl} proxyStatus={proxyStatus} />
-        <Card className="bg-white/3 py-0">
+        <Card className="bg-white/3 py-0 shadow-none">
           <CardContent className="space-y-3 p-4 text-sm text-[color:var(--muted-foreground)]">
             <p>
               Polling interval:{" "}
@@ -227,7 +233,7 @@ export default function App() {
   );
 
   const tracePanel = (
-    <div className="h-full min-h-0 overflow-hidden p-4 md:p-6 xl:p-0">
+    <div className="h-full min-h-0 overflow-hidden">
       <TraceList
         traces={filteredTraces}
         selectedTraceIds={selectedTraceIds}
@@ -255,7 +261,7 @@ export default function App() {
   );
 
   const detailPanel = (
-    <div className="h-full min-h-[18rem] xl:min-h-0">
+    <div className="h-full min-h-[18rem] min-w-0 xl:min-h-0">
       <TraceDetail
         trace={activeTrace}
         spans={traceSpansQuery.data ?? []}
@@ -265,7 +271,7 @@ export default function App() {
   );
 
   const chatPanel = (
-    <div className="h-full min-h-[24rem] xl:min-h-0">
+    <div className="h-full min-h-[24rem] min-w-0 xl:min-h-0">
       <ChatInterface
         project={activeProject}
         messages={chat.messages}
@@ -282,28 +288,28 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(58,180,132,0.16),_transparent_42%),linear-gradient(180deg,_rgba(8,10,14,1),_rgba(4,6,10,1))] text-[color:var(--foreground)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(46,160,120,0.14),_transparent_34%),linear-gradient(180deg,_rgba(6,7,10,1),_rgba(3,4,6,1))] text-[color:var(--foreground)]">
       <div className="flex min-h-screen flex-col xl:hidden">
-        <div className="border-b border-white/10">{sidebar}</div>
-        <div className="grid gap-4 md:gap-6">
+        <div className="p-4 pb-0 md:p-6 md:pb-0">{sidebar}</div>
+        <div className="grid gap-4 p-4 md:gap-6 md:p-6">
           {tracePanel}
-          <div className="grid gap-4 px-4 pb-4 md:gap-6 md:px-6 md:pb-6">
+          <div className="grid gap-4 md:gap-6">
             {detailPanel}
             {chatPanel}
           </div>
         </div>
       </div>
 
-      <div className="hidden h-screen xl:block">
+      <div className="hidden h-screen p-3 xl:block">
         <ResizablePanelGroup
-          className="min-h-screen"
+          className="h-[calc(100vh-1.5rem)] gap-3"
           defaultLayout={
             rootLayout.defaultLayout ?? {
               "observer-sidebar-panel": 320,
               "observer-workspace-panel": 1,
             }
           }
-          id="observer-root-layout"
+          id={layoutIds.root}
           onLayoutChanged={rootLayout.onLayoutChanged}
           orientation="horizontal"
         >
@@ -314,19 +320,19 @@ export default function App() {
             maxSize="420px"
             minSize="280px"
           >
-            {sidebar}
+            <div className="h-full min-h-0">{sidebar}</div>
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={1} id="observer-workspace-panel" minSize="720px">
             <ResizablePanelGroup
-              className="min-h-screen"
+              className="h-full gap-2"
               defaultLayout={
                 mainLayout.defaultLayout ?? {
                   "observer-traces-panel": 56,
                   "observer-inspector-panel": 44,
                 }
               }
-              id="observer-main-layout"
+              id={layoutIds.main}
               onLayoutChanged={mainLayout.onLayoutChanged}
               orientation="horizontal"
             >
@@ -336,23 +342,23 @@ export default function App() {
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={44} id="observer-inspector-panel" minSize={26}>
                 <ResizablePanelGroup
-                  className="min-h-screen"
+                  className="h-full gap-2"
                   defaultLayout={
                     rightLayout.defaultLayout ?? {
                       "observer-detail-panel": 46,
                       "observer-chat-panel": 54,
                     }
                   }
-                  id="observer-right-layout"
+                  id={layoutIds.right}
                   onLayoutChanged={rightLayout.onLayoutChanged}
                   orientation="vertical"
                 >
                   <ResizablePanel defaultSize={46} id="observer-detail-panel" minSize={24}>
-                    <div className="h-full min-h-0 p-6 pb-3">{detailPanel}</div>
+                    <div className="h-full min-h-0 overflow-hidden">{detailPanel}</div>
                   </ResizablePanel>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={54} id="observer-chat-panel" minSize={28}>
-                    <div className="h-full min-h-0 p-6 pt-3">{chatPanel}</div>
+                    <div className="h-full min-h-0 overflow-hidden">{chatPanel}</div>
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>

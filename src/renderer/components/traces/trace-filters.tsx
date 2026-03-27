@@ -17,17 +17,19 @@ export const TraceFiltersBar = ({
   phoenixProjectNames: string[];
   onChange: (filters: TraceFilters) => void;
 }) => (
-  <div className="grid gap-3 border-b px-6 py-4 md:grid-cols-[1.2fr_0.9fr_0.8fr_0.8fr_0.8fr]">
-    <Input
-      placeholder="Search by span name or trace id"
-      value={filters.search}
-      onChange={(event) => onChange({ ...filters, search: event.target.value })}
-    />
+  <div className="flex flex-wrap gap-3 border-b border-white/8 px-6 py-4">
+    <div className="min-w-[12rem] flex-1 basis-[16rem]">
+      <Input
+        placeholder="Search by span name or trace id"
+        value={filters.search}
+        onChange={(event) => onChange({ ...filters, search: event.target.value })}
+      />
+    </div>
     <Select
       value={filters.projectName}
       onValueChange={(value) => onChange({ ...filters, projectName: value })}
     >
-      <SelectTrigger>
+      <SelectTrigger className="min-w-[14rem] flex-1 basis-[14rem]">
         <SelectValue placeholder="Phoenix project" />
       </SelectTrigger>
       <SelectContent>
@@ -40,7 +42,7 @@ export const TraceFiltersBar = ({
       </SelectContent>
     </Select>
     <Select value={filters.status} onValueChange={(value) => onChange({ ...filters, status: value as TraceFilters["status"] })}>
-      <SelectTrigger>
+      <SelectTrigger className="min-w-[11rem] flex-1 basis-[11rem]">
         <SelectValue placeholder="Status" />
       </SelectTrigger>
       <SelectContent>
@@ -51,7 +53,7 @@ export const TraceFiltersBar = ({
       </SelectContent>
     </Select>
     <Select value={filters.sort} onValueChange={(value) => onChange({ ...filters, sort: value as TraceFilters["sort"] })}>
-      <SelectTrigger>
+      <SelectTrigger className="min-w-[10rem] flex-1 basis-[10rem]">
         <SelectValue placeholder="Sort by" />
       </SelectTrigger>
       <SelectContent>
@@ -60,7 +62,7 @@ export const TraceFiltersBar = ({
       </SelectContent>
     </Select>
     <Select value={filters.order} onValueChange={(value) => onChange({ ...filters, order: value as TraceFilters["order"] })}>
-      <SelectTrigger>
+      <SelectTrigger className="min-w-[10rem] flex-1 basis-[10rem]">
         <SelectValue placeholder="Order" />
       </SelectTrigger>
       <SelectContent>

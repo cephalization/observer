@@ -24,7 +24,7 @@ export const ConnectionStatus = ({
   return (
     <div className="flex items-center gap-2 text-sm text-[color:var(--muted-foreground)]">
       <Icon className={`h-4 w-4 ${state === "starting" ? "animate-spin" : ""}`} />
-      <span className="truncate">{phoenixUrl ?? "No Phoenix project selected"}</span>
+      <span className="min-w-0 truncate">{phoenixUrl ?? "No Phoenix project selected"}</span>
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge className="cursor-default">proxied</Badge>

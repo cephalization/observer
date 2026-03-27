@@ -34,14 +34,14 @@ function ResizableHandle({
     <ResizablePrimitive.Separator
       data-slot="resizable-handle"
       className={cn(
-        "relative flex w-px items-center justify-center bg-border/80 after:absolute after:inset-y-0 after:left-1/2 after:w-2 after:-translate-x-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 aria-[orientation=horizontal]:h-px aria-[orientation=horizontal]:w-full aria-[orientation=horizontal]:after:left-0 aria-[orientation=horizontal]:after:top-1/2 aria-[orientation=horizontal]:after:h-2 aria-[orientation=horizontal]:after:w-full aria-[orientation=horizontal]:after:-translate-y-1/2 aria-[orientation=horizontal]:after:translate-x-0 [&[aria-orientation=horizontal]>div]:rotate-90",
+        "relative flex w-3 shrink-0 items-center justify-center bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 aria-[orientation=horizontal]:h-3 aria-[orientation=horizontal]:w-full [&[aria-orientation=horizontal]>div]:rotate-90",
         className,
       )}
       {...props}
     >
       {withHandle ? (
-        <div className="z-10 flex h-10 w-5 items-center justify-center rounded-full border border-border/80 bg-background/95 text-muted-foreground shadow-sm">
-          <GripVerticalIcon className="size-3.5" />
+        <div className="z-10 flex h-9 w-5 items-center justify-center rounded-full bg-black/80 text-white/45 opacity-75 shadow-[0_10px_25px_rgba(0,0,0,0.45)] transition-opacity hover:opacity-100">
+          <GripVerticalIcon className="size-3" />
         </div>
       ) : null}
     </ResizablePrimitive.Separator>

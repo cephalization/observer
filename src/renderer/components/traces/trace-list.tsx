@@ -41,8 +41,8 @@ export const TraceList = ({
   onAnalyze: () => void;
   onRefresh: () => void;
 }) => (
-  <Card className="h-full overflow-hidden">
-    <CardHeader className="border-b">
+  <Card className="flex h-full min-h-0 flex-col overflow-hidden py-4">
+    <CardHeader className="border-b border-white/8 pb-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <CardTitle>Live Phoenix traces</CardTitle>
@@ -66,12 +66,12 @@ export const TraceList = ({
       phoenixProjectNames={phoenixProjectNames}
       onChange={onChangeFilters}
     />
-    <CardContent className="p-0">
+    <CardContent className="flex min-h-0 flex-1 flex-col p-0">
       {error ? (
-        <div className="border-b bg-red-500/10 px-6 py-3 text-sm text-red-300">{error}</div>
+        <div className="border-b border-white/8 bg-red-500/10 px-6 py-3 text-sm text-red-300">{error}</div>
       ) : null}
-      <div className="max-h-[calc(100vh-22rem)] overflow-auto">
-        <div className="grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b border-white/8 px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <span></span>
           <span>Trace</span>
           <span>Started</span>
@@ -90,7 +90,7 @@ export const TraceList = ({
             ))
           : traces.map((trace) => (
               <div
-                className={`grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b px-6 py-4 text-sm ${activeTraceId === trace.traceId ? "bg-accent/50" : "hover:bg-accent/20"}`}
+                className={`grid grid-cols-[32px_1.4fr_0.8fr_0.8fr_0.6fr] gap-3 border-b border-white/6 px-6 py-4 text-sm ${activeTraceId === trace.traceId ? "bg-accent/35" : "hover:bg-accent/15"}`}
                 key={trace.traceId}
               >
                 <Checkbox
