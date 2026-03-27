@@ -4,28 +4,56 @@
 
 Observer is an Electron application for monitoring and analyzing Arize Phoenix traces. It connects to Phoenix instances, polls traces via REST API, provides an AI-powered chat interface for trace analysis, and traces its own chat completions back to Phoenix using OpenTelemetry from the browser (renderer process).
 
+## Progress Update
+
+Status as of 2026-03-27:
+
+- Completed the initial scaffold for phases 1 through 7 enough to run the app end-to-end in development
+- Verified `pnpm typecheck`, `pnpm check`, and `pnpm start`
+- Fixed the Forge main-entry mismatch by pointing `package.json` at `.vite/build/index.js`
+
+Implemented now:
+
+- React 19 renderer bootstrap with `src/renderer/main.tsx` and `src/renderer/App.tsx`
+- TypeScript 6 project split with `tsconfig.app.json` and `tsconfig.node.json`
+- oxlint + oxfmt tooling, Vite React renderer config, Tailwind 4 styling, and `components.json`
+- Electron main/preload split with typed `window.observer` bridge
+- `electron-store` persistence for projects and theme preference
+- Hono-based localhost proxy for Phoenix REST + OTEL export, including `/health` and `/arize_phoenix_version`
+- Phoenix polling via `@arizeai/phoenix-client/traces` wrapped with TanStack Query
+- Browser OTEL initialization with `WebTracerProvider`, OTLP HTTP exporter, and OpenInference span processing
+- Direct renderer-side AI SDK chat with telemetry enabled and selected-trace context injection
+- Zustand-backed selection/settings UI and a functional single-page shell
+
+Still remaining / follow-up:
+
+- Replace the hand-authored shadcn-style primitives with official generated shadcn components if desired
+- Add richer Phoenix trace detail views and filtering beyond the current list/table view
+- Harden chat state handling and proxy lifecycle further as we add real usage paths
+- Resolve remaining non-blocking oxlint warnings around function size and a few style preferences
+
 ## Design Decisions (Finalized)
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Framework | Electron Forge + Vite | Already scaffolded |
-| UI | React 19 + shadcn + Tailwind CSS 4 | Modern, composable, fast |
-| TypeScript | 6.0.x | Latest stable, modern defaults |
-| Linting | oxlint | Fast, replaces ESLint |
-| Formatting | oxfmt 0.42.x | Bleeding edge, fast |
-| State management | Zustand 5 | Lightweight, simple |
-| Server state | TanStack Query 5 | Polling, caching, refetching |
-| Persistence | electron-store 11 (ESM) | Encrypted storage for API keys, project configs |
-| Phoenix client | @arizeai/phoenix-client (browser-compatible) | Wraps openapi-fetch, uses standard fetch |
-| AI SDK | Vercel AI SDK (ai, @ai-sdk/openai, @ai-sdk/anthropic) | Multi-provider, streaming, telemetry |
-| OTEL tracing | Browser OTEL SDK (sdk-trace-web) | Core learning objective |
-| OpenInference | @arizeai/openinference-vercel | AI SDK span processing for Phoenix |
-| Proxy server | Hono (in main process) | Lightweight, TypeScript-native |
-| Vite version | Highest compatible with @electron-forge/plugin-vite (^5.x) | Forge plugin tested against Vite 5 |
-| Theme | System/dark/light with persistence in electron-store | shadcn theming |
-| Layout | Single-page with sidebar panels | No router needed |
-| Trace context for chat | Checkbox selection + "Analyze" button | User picks traces, injected as system context |
-| Polling interval | Configurable in UI | User sets refresh rate |
+| Decision               | Choice                                                     | Rationale                                       |
+| ---------------------- | ---------------------------------------------------------- | ----------------------------------------------- |
+| Framework              | Electron Forge + Vite                                      | Already scaffolded                              |
+| UI                     | React 19 + shadcn + Tailwind CSS 4                         | Modern, composable, fast                        |
+| TypeScript             | 6.0.x                                                      | Latest stable, modern defaults                  |
+| Linting                | oxlint                                                     | Fast, replaces ESLint                           |
+| Formatting             | oxfmt 0.42.x                                               | Bleeding edge, fast                             |
+| State management       | Zustand 5                                                  | Lightweight, simple                             |
+| Server state           | TanStack Query 5                                           | Polling, caching, refetching                    |
+| Persistence            | electron-store 11 (ESM)                                    | Encrypted storage for API keys, project configs |
+| Phoenix client         | @arizeai/phoenix-client (browser-compatible)               | Wraps openapi-fetch, uses standard fetch        |
+| AI SDK                 | Vercel AI SDK (ai, @ai-sdk/openai, @ai-sdk/anthropic)      | Multi-provider, streaming, telemetry            |
+| OTEL tracing           | Browser OTEL SDK (sdk-trace-web)                           | Core learning objective                         |
+| OpenInference          | @arizeai/openinference-vercel                              | AI SDK span processing for Phoenix              |
+| Proxy server           | Hono (in main process)                                     | Lightweight, TypeScript-native                  |
+| Vite version           | Highest compatible with @electron-forge/plugin-vite (^5.x) | Forge plugin tested against Vite 5              |
+| Theme                  | System/dark/light with persistence in electron-store       | shadcn theming                                  |
+| Layout                 | Single-page with sidebar panels                            | No router needed                                |
+| Trace context for chat | Checkbox selection + "Analyze" button                      | User picks traces, injected as system context   |
+| Polling interval       | Configurable in UI                                         | User sets refresh rate                          |
 
 ## Architecture
 
@@ -95,6 +123,7 @@ The renderer uses the browser OTEL SDK to trace AI SDK chat completions:
 ### Phoenix Client (Browser-Compatible)
 
 Research confirmed @arizeai/phoenix-client works in browser contexts:
+
 - Core client uses `openapi-fetch` (standard fetch)
 - Environment variable reading gracefully degrades (returns {} when no process.env)
 - All sub-modules except `/experiments` are browser-safe
@@ -118,18 +147,18 @@ Research confirmed @arizeai/phoenix-client works in browser contexts:
 interface Project {
   id: string;
   name: string;
-  phoenixUrl: string;        // e.g., "http://localhost:6006"
-  phoenixApiKey?: string;    // Optional bearer token for Phoenix
-  llmProvider: 'openai' | 'anthropic';
-  llmApiKey: string;         // LLM provider API key
-  llmModel: string;          // e.g., "gpt-4o", "claude-sonnet-4-20250514"
+  phoenixUrl: string; // e.g., "http://localhost:6006"
+  phoenixApiKey?: string; // Optional bearer token for Phoenix
+  llmProvider: "openai" | "anthropic";
+  llmApiKey: string; // LLM provider API key
+  llmModel: string; // e.g., "gpt-4o", "claude-sonnet-4-20250514"
   tracePollingInterval: number; // milliseconds, configurable
   createdAt: string;
   updatedAt: string;
 }
 
 interface AppPreferences {
-  theme: 'system' | 'dark' | 'light';
+  theme: "system" | "dark" | "light";
   activeProjectId: string | null;
 }
 ```
@@ -250,13 +279,15 @@ select popover command label switch
 
 ### Phase 1: Tooling Modernization
 
+Status: completed
+
 1. Upgrade TypeScript to 6.0.x
    - Update tsconfig.json for TS6 defaults (strict is now true by default, module defaults to esnext, target defaults to es2025)
    - Remove deprecated options (baseUrl as lookup root, moduleResolution: node)
    - Split into tsconfig.json + tsconfig.app.json + tsconfig.node.json
    - Add path alias: `@/*` -> `./src/renderer/*`
 2. Replace ESLint with oxlint
-   - Remove: eslint, @typescript-eslint/*, eslint-plugin-import, .eslintrc.json
+   - Remove: eslint, @typescript-eslint/\*, eslint-plugin-import, .eslintrc.json
    - Add: oxlint, create .oxlintrc.json
 3. Add oxfmt
    - Add: oxfmt
@@ -272,6 +303,8 @@ select popover command label switch
 
 ### Phase 2: React 19 + UI Foundation
 
+Status: completed
+
 1. Install React 19 + ReactDOM 19 + @vitejs/plugin-react
 2. Install Tailwind CSS 4 + @tailwindcss/vite
 3. Configure vite.renderer.config.ts (React plugin, Tailwind plugin, path aliases)
@@ -285,11 +318,13 @@ select popover command label switch
 
 ### Phase 3: Electron IPC, Preload, Proxy, Store
 
+Status: completed for initial development workflow
+
 1. Install electron-store, hono
 2. Create src/main/store.ts (electron-store schema for projects + preferences)
 3. Create src/main/proxy.ts (Hono server)
    - POST /v1/traces -> forward to Phoenix OTLP endpoint
-   - GET/POST /v1/* -> forward to Phoenix REST API
+   - GET/POST /v1/\* -> forward to Phoenix REST API
    - GET /health -> return proxy status + Phoenix ping
    - Inject Authorization header from store
    - Bind to 127.0.0.1, random port
@@ -305,6 +340,8 @@ select popover command label switch
 8. Test IPC round-trip from renderer
 
 ### Phase 4: Phoenix Client + Trace Polling
+
+Status: completed for project-scoped trace polling
 
 1. Install @arizeai/phoenix-client, @tanstack/react-query
 2. Create src/renderer/lib/phoenix.ts
@@ -324,6 +361,8 @@ select popover command label switch
 
 ### Phase 5: Browser OTEL Setup
 
+Status: completed for renderer-side export through the main-process proxy
+
 1. Install @opentelemetry/api, @opentelemetry/sdk-trace-web, @opentelemetry/exporter-trace-otlp-http, @opentelemetry/resources, @opentelemetry/semantic-conventions
 2. Install @arizeai/openinference-semantic-conventions, @arizeai/openinference-vercel
 3. Create src/renderer/lib/otel.ts
@@ -337,6 +376,8 @@ select popover command label switch
 5. Verify traces appear in Phoenix
 
 ### Phase 6: AI SDK Chat with Telemetry
+
+Status: completed for direct renderer streaming and Phoenix telemetry export
 
 1. Install ai, @ai-sdk/openai, @ai-sdk/anthropic
 2. Create src/renderer/lib/ai.ts
@@ -356,6 +397,8 @@ select popover command label switch
 
 ### Phase 7: Project/Connection Management
 
+Status: completed for create/update/activate flows
+
 1. Install zustand
 2. Create src/renderer/stores/app-store.ts
    - activeProjectId, selectedTraceIds, chatMessages, sidebarOpen
@@ -370,6 +413,8 @@ select popover command label switch
    - Update Zustand store
 
 ### Phase 8: Polish & Status UI
+
+Status: partially completed
 
 1. Create ConnectionStatus component
    - Shows Phoenix URL (from project config, not proxy URL)

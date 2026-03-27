@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  --background: oklch(0.97 0.005 95);
+  --foreground: oklch(0.18 0.01 95);
+  --card: oklch(0.99 0.003 95);
+  --card-foreground: oklch(0.18 0.01 95);
+  --popover: oklch(0.99 0.003 95);
+  --popover-foreground: oklch(0.18 0.01 95);
+  --primary: oklch(0.62 0.15 160);
+  --primary-foreground: oklch(0.98 0.004 95);
+  --secondary: oklch(0.92 0.01 95);
+  --secondary-foreground: oklch(0.25 0.01 95);
+  --muted-foreground: oklch(0.48 0.01 95);
+  --ring: oklch(0.62 0.15 160);
+}
+
+.dark {
+  --background: oklch(0.1 0.01 265);
+  --foreground: oklch(0.96 0.005 95);
+  --card: oklch(0.16 0.01 265);
+  --card-foreground: oklch(0.96 0.005 95);
+  --popover: oklch(0.16 0.01 265);
+  --popover-foreground: oklch(0.96 0.005 95);
+  --primary: oklch(0.7 0.17 160);
+  --primary-foreground: oklch(0.12 0.01 265);
+  --secondary: oklch(0.22 0.01 265);
+  --secondary-foreground: oklch(0.92 0.01 95);
+  --muted-foreground: oklch(0.72 0.01 95);
+  --ring: oklch(0.7 0.17 160);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  color-scheme: dark light;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: rgb(255 255 255 / 0.12);
+  background-clip: padding-box;
+}
