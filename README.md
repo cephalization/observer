@@ -1,5 +1,7 @@
 # Observer
 
+![Observer demo](assets/demo.gif)
+
 Observer is an Electron app that demonstrates how to trace browser-context AI interactions into Arize Phoenix.
 
 Use this repo as a practical reference for tracing an Electron renderer or browser-style web application with OpenTelemetry, sending those traces to Phoenix, and then reading them back into the UI.
