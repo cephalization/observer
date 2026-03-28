@@ -26,6 +26,19 @@ Requirements:
 - Phoenix must allow the renderer origin via CORS
 - the browser must be allowed to send OTLP requests to `BASE_URL/v1/traces`
 
+To make Phoenix reachable from the browser:
+
+- Configure `PHOENIX_ALLOWED_ORIGINS` as a comma-separated list of allowed origins, for example:
+
+```bash
+# As a shell environment variable
+# or, in your docker configuration for your Phoenix instance
+export PHOENIX_ALLOWED_ORIGINS="http://localhost:5173,http://127.0.0.1:5173"
+# Then launch Phoenix, you will see the allowed origins in the startup message
+```
+
+For Electron-style schemes, include the exact app origin you want Phoenix to allow.
+
 This is the path:
 
 ```text
