@@ -34,13 +34,13 @@ export const AppSidebar = ({
   telemetryProjectName: string | null;
   themeIcon: ReactNode;
 }) => (
-  <aside className="flex h-full min-h-0 flex-col rounded-[24px] bg-black/35 p-6 pt-16 backdrop-blur-xl xl:pt-18">
+  <aside className="flex h-full min-h-0 flex-col rounded-[24px] bg-card p-6 pt-16 xl:pt-18">
     <div className="mb-8 space-y-3">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
         Observer
       </p>
       <h1 className="text-3xl font-semibold tracking-tight">Phoenix trace workbench</h1>
-      <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
+      <p className="text-sm leading-6 text-muted-foreground">
         Poll traces, stream analysis chats, and trace the UI&apos;s own AI completions back into
         Phoenix.
       </p>
@@ -58,35 +58,35 @@ export const AppSidebar = ({
 
     <div className="space-y-4">
       <ConnectionStatus phoenixUrl={activeProject?.phoenixUrl} proxyStatus={proxyStatus} />
-      <Card className="bg-white/3 py-0 shadow-none">
-        <CardContent className="space-y-3 p-4 text-sm text-[color:var(--muted-foreground)]">
+      <Card className="bg-muted/40 py-0 shadow-none">
+        <CardContent className="space-y-3 p-4 text-sm text-muted-foreground">
           <p>
             Polling interval:{" "}
-            <span className="font-semibold text-[color:var(--foreground)]">
+            <span className="font-semibold text-foreground">
               {activeProject?.tracePollingInterval ?? 5000} ms
             </span>
           </p>
           <p>
             Proxy base URL:{" "}
-            <span className="font-mono text-xs text-[color:var(--foreground)]">
+            <span className="font-mono text-xs text-foreground">
               {proxyStatus?.baseUrl ?? "inactive"}
             </span>
           </p>
           <p>
             Theme:{" "}
-            <span className="font-semibold text-[color:var(--foreground)]">
+            <span className="font-semibold text-foreground">
               {preferencesTheme ?? "system"}
             </span>
           </p>
           <p>
             OTEL project:{" "}
-            <span className="font-semibold text-[color:var(--foreground)]">
+            <span className="font-semibold text-foreground">
               {telemetryProjectName ?? "inactive"}
             </span>
           </p>
           <p>
             OTLP export:{" "}
-            <span className="font-mono text-xs text-[color:var(--foreground)]">
+            <span className="font-mono text-xs text-foreground">
               {telemetryExportUrl ?? "inactive"}
             </span>
           </p>
@@ -95,7 +95,7 @@ export const AppSidebar = ({
     </div>
 
     <div className="mt-auto flex items-center justify-between pt-6">
-      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
+      <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
         renderer telemetry active
       </div>
       <Button size="sm" variant="outline" onClick={onCycleTheme}>

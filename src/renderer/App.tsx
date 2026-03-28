@@ -295,7 +295,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(46,160,120,0.14),_transparent_34%),linear-gradient(180deg,_rgba(6,7,10,1),_rgba(3,4,6,1))] text-[color:var(--foreground)]">
+    <div className="min-h-screen bg-background text-foreground">
       <MobileAppLayout
         sidebar={sidebar}
         tracePanel={tracePanel}

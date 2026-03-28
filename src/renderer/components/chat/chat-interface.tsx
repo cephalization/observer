@@ -75,7 +75,7 @@ export const ChatInterface = ({
 
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden py-4">
-      <CardHeader className="border-b border-white/8 pb-3">
+      <CardHeader className="border-b border-border/70 pb-3">
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle>Trace analysis chat</CardTitle>
@@ -107,13 +107,13 @@ export const ChatInterface = ({
       </CardHeader>
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-5 pt-4">
-        <div className="rounded-2xl border border-dashed border-white/8 bg-black/20 px-4 py-2.5 text-sm text-[color:var(--muted-foreground)]">
+        <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 px-4 py-2.5 text-sm text-muted-foreground">
           Selected traces in context: <span className="font-semibold text-foreground">{selectedTraceCount}</span>
-          <span className="mx-2 text-white/20">/</span>
+          <span className="mx-2 text-muted-foreground/40">/</span>
           span records: <span className="font-semibold text-foreground">{selectedSpanCount}</span>
         </div>
 
-        <Conversation className="min-h-0 flex-1 rounded-2xl border border-white/6 bg-black/15">
+        <Conversation className="min-h-0 flex-1 rounded-2xl border border-border/70 bg-muted/20">
           <ConversationContent className="gap-4 p-5">
             {messages.length === 0 ? (
               <ConversationEmptyState

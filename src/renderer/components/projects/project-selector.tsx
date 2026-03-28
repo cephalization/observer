@@ -25,7 +25,7 @@ export const ProjectSelector = ({
 }) => (
   <div className="space-y-3">
     <div className="flex items-center justify-between">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted-foreground)]">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
         Projects
       </p>
       <div className="flex items-center gap-2">

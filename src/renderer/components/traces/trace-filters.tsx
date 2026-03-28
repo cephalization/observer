@@ -17,7 +17,7 @@ export const TraceFiltersBar = ({
   phoenixProjectNames: string[];
   onChange: (filters: TraceFilters) => void;
 }) => (
-  <div className="flex flex-wrap gap-3 border-b border-white/8 px-6 py-4">
+  <div className="flex flex-wrap gap-3 border-b border-border/70 px-6 py-4">
     <div className="min-w-[12rem] flex-1 basis-[16rem]">
       <Input
         placeholder="Search by span name or trace id"

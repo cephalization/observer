@@ -40,7 +40,7 @@ const AttributeList = ({ attributes }: { attributes?: Record<string, unknown> })
   return (
     <div className="space-y-3">
       {entries.map(([key, value]) => (
-        <div className="rounded-lg border bg-background/30 p-3" key={key}>
+        <div className="rounded-lg border border-border/70 bg-muted/30 p-3" key={key}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {key}
           </p>
@@ -61,7 +61,7 @@ const EventList = ({ events }: { events?: Array<Record<string, unknown>> }) => {
   return (
     <div className="space-y-3">
       {events.map((event, index) => (
-        <div className="rounded-lg border bg-background/30 p-3" key={`${event.name ?? "event"}-${index}`}>
+        <div className="rounded-lg border border-border/70 bg-muted/30 p-3" key={`${event.name ?? "event"}-${index}`}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {String(event.name ?? `Event ${index + 1}`)}
           </p>
@@ -81,7 +81,7 @@ const TraceSummary = ({
   spanCount: number;
   trace: TraceRecord;
 }) => (
-  <div className="rounded-2xl border border-white/8 bg-background/40 p-4">
+  <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
     <div className="flex min-w-0 items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="truncate text-[1.05rem] font-semibold">{trace.rootSpanName ?? trace.traceId}</p>
@@ -109,7 +109,7 @@ const TraceSummary = ({
 );
 
 const SelectedSpanSummary = ({ span }: { span: SpanRecord }) => (
-  <div className="rounded-2xl border border-white/8 bg-background/30 p-4">
+  <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       <p className="truncate font-medium">Selected span: {span.name}</p>
       <Badge variant="secondary">{span.spanKind ?? "SPAN"}</Badge>
@@ -133,7 +133,7 @@ const SpanTreeItem = ({
   onSelect: (span: SpanRecord) => void;
 }) => (
   <button
-    className={`w-full rounded-lg border p-3 text-left ${active ? "border-primary bg-primary/8" : "bg-background/40 hover:bg-accent/40"}`}
+    className={`w-full rounded-lg border border-border/70 p-3 text-left ${active ? "border-primary bg-primary/8" : "bg-muted/20 hover:bg-accent/40"}`}
     onClick={() => onSelect(span)}
     style={{ marginLeft: `${depth * 16}px` }}
     type="button"
@@ -191,7 +191,7 @@ export const TraceDetail = ({
 
   return (
     <Card className="flex h-full min-h-[20rem] min-h-0 flex-col overflow-hidden py-4">
-      <CardHeader className="border-b border-white/8 pb-4">
+      <CardHeader className="border-b border-border/70 pb-4">
         <CardTitle>Trace detail</CardTitle>
         <CardDescription>
           Inspect the selected trace&apos;s spans, attributes, and events before sending it to chat.
@@ -202,7 +202,7 @@ export const TraceDetail = ({
         {trace ? (
           <TraceSummary spanCount={spans.length} trace={trace} />
         ) : (
-          <div className="rounded-2xl border border-dashed border-white/8 p-6 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
             Pick a trace row to inspect its spans, attributes, and events.
           </div>
         )}
