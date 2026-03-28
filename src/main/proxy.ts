@@ -52,6 +52,36 @@ const buildHeaders = (project: Project, request: Request) => {
   return headers;
 };
 
+const buildProxyResponse = (response: Response) => {
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.delete("content-encoding");
+
+  return new Response(response.body, {
+    status: response.status,
+    headers: responseHeaders,
+  });
+};
+
+const forwardRequest = async ({
+  body,
+  headers,
+  method,
+  targetUrl,
+}: {
+  body?: ArrayBuffer;
+  headers: Headers;
+  method: string;
+  targetUrl: string;
+}) => {
+  const response = await fetch(targetUrl, {
+    method,
+    headers,
+    body,
+  });
+
+  return buildProxyResponse(response);
+};
+
 const createProxyApp = (project: Project) => {
   const app = new Hono();
   const phoenixUrl = normalizePhoenixUrl(project.phoenixUrl);
@@ -75,9 +105,18 @@ const createProxyApp = (project: Project) => {
       headers: buildHeaders(project, context.req.raw),
     });
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: response.headers,
+    return buildProxyResponse(response);
+  });
+
+  app.post("/v1/traces", async (context) => {
+    const headers = buildHeaders(project, context.req.raw);
+    const body = await context.req.raw.arrayBuffer();
+
+    return forwardRequest({
+      body,
+      headers,
+      method: "POST",
+      targetUrl: `${phoenixUrl}/v1/traces`,
     });
   });
 
@@ -89,17 +128,11 @@ const createProxyApp = (project: Project) => {
     const body =
       method === "GET" || method === "HEAD" ? undefined : await context.req.raw.arrayBuffer();
 
-    const response = await fetch(targetUrl, {
-      method,
-      headers,
+    return forwardRequest({
       body,
-    });
-
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.delete("content-encoding");
-    return new Response(response.body, {
-      status: response.status,
-      headers: responseHeaders,
+      headers,
+      method,
+      targetUrl,
     });
   });
 

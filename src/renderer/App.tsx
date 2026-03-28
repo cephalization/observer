@@ -6,24 +6,28 @@ import { useDefaultLayout } from "react-resizable-panels";
 import { toast } from "sonner";
 
 import type { Project, ProjectInput, TraceFilters, TraceRecord } from "../shared/types";
+import type { TracePage } from "@/lib/phoenix";
 import { ChatInterface } from "@/components/chat/chat-interface";
-import { ProjectSelector } from "@/components/projects/project-selector";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { DesktopAppLayout } from "@/components/layout/desktop-app-layout";
+import { MobileAppLayout } from "@/components/layout/mobile-app-layout";
 import { ConnectionSettings } from "@/components/projects/connection-settings";
 import { TraceDetail } from "@/components/traces/trace-detail";
-import { ConnectionStatus } from "@/components/status/connection-status";
 import { TraceList } from "@/components/traces/trace-list";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { Separator } from "@/components/ui/separator";
 import { useChat } from "@/hooks/use-chat";
-import { usePhoenixProjectNames, usePhoenixTraces, useTraceSpans } from "@/hooks/use-phoenix-traces";
+import {
+  usePhoenixProjectNames,
+  usePhoenixTraces,
+  useSelectedTraceSpans,
+  useTraceSpans,
+} from "@/hooks/use-phoenix-traces";
 import { useProjects } from "@/hooks/use-projects";
-import { initializeTracing, shutdownTracing } from "@/lib/otel";
+import {
+  getTelemetryExportUrl,
+  getTelemetryProjectName,
+  initializeTracing,
+  shutdownTracing,
+} from "@/lib/otel";
 import { useAppStore } from "@/stores/app-store";
 
 const themeOrder: Array<"system" | "dark" | "light"> = ["system", "dark", "light"];
@@ -33,12 +37,13 @@ const defaultFilters: TraceFilters = {
   status: "all",
   sort: "start_time",
   order: "desc",
+  timeRange: "24h",
 };
 
 const layoutIds = {
-  main: "observer-main-layout-v2",
-  right: "observer-right-layout-v2",
+  pinned: "observer-workspace-layout-pinned-v1",
   root: "observer-root-layout-v2",
+  unpinned: "observer-workspace-layout-unpinned-v1",
 };
 
 const matchesTraceFilters = (trace: TraceRecord, filters: TraceFilters) => {
@@ -73,17 +78,20 @@ export default function App() {
   } = useAppStore();
   const [traceFilters, setTraceFilters] = useState<TraceFilters>(defaultFilters);
   const [settingsProject, setSettingsProject] = useState<Project | null>(null);
+  const [chatPinned, setChatPinned] = useState(true);
+  const telemetryProjectName = activeProject ? getTelemetryProjectName(activeProject.name) : null;
+  const telemetryExportUrl = proxyStatus?.baseUrl ? getTelemetryExportUrl(proxyStatus.baseUrl) : null;
   const rootLayout = useDefaultLayout({
     id: layoutIds.root,
     panelIds: ["observer-sidebar-panel", "observer-workspace-panel"],
   });
-  const mainLayout = useDefaultLayout({
-    id: layoutIds.main,
-    panelIds: ["observer-traces-panel", "observer-inspector-panel"],
+  const pinnedLayout = useDefaultLayout({
+    id: layoutIds.pinned,
+    panelIds: ["observer-traces-panel", "observer-detail-panel"],
   });
-  const rightLayout = useDefaultLayout({
-    id: layoutIds.right,
-    panelIds: ["observer-detail-panel", "observer-chat-panel"],
+  const unpinnedLayout = useDefaultLayout({
+    id: layoutIds.unpinned,
+    panelIds: ["observer-traces-panel", "observer-detail-panel", "observer-chat-panel"],
   });
 
   useEffect(() => {
@@ -106,18 +114,27 @@ export default function App() {
       return;
     }
 
-    void initializeTracing(proxyStatus.baseUrl, activeProject.name);
+    void initializeTracing(proxyStatus.baseUrl, telemetryProjectName as string);
 
     return () => {
       void shutdownTracing();
     };
-  }, [activeProject, proxyStatus?.baseUrl]);
+  }, [activeProject, proxyStatus?.baseUrl, telemetryProjectName]);
 
   const phoenixProjectNamesQuery = usePhoenixProjectNames(proxyStatus?.baseUrl);
   const tracesQuery = usePhoenixTraces(activeProject, proxyStatus?.baseUrl, traceFilters);
+  const tracePages = tracesQuery.data as { pages: TracePage[] } | undefined;
+  const pagedTraces = useMemo(
+    () =>
+      tracePages?.pages.reduce<TraceRecord[]>((all, page) => {
+        all.push(...page.traces);
+        return all;
+      }, []) ?? [],
+    [tracePages?.pages],
+  );
   const filteredTraces = useMemo(
-    () => (tracesQuery.data ?? []).filter((trace) => matchesTraceFilters(trace, traceFilters)),
-    [traceFilters, tracesQuery.data],
+    () => pagedTraces.filter((trace) => matchesTraceFilters(trace, traceFilters)),
+    [pagedTraces, traceFilters],
   );
   const selectedTraces = useMemo(
     () => filteredTraces.filter((trace) => selectedTraceIds.includes(trace.traceId)),
@@ -127,8 +144,36 @@ export default function App() {
     () => filteredTraces.find((trace) => trace.traceId === activeTraceId) ?? null,
     [activeTraceId, filteredTraces],
   );
-  const traceSpansQuery = useTraceSpans(activeProject, proxyStatus?.baseUrl, activeTrace?.traceId ?? null);
-  const chat = useChat(activeProject, selectedTraces);
+  const traceSpansQuery = useTraceSpans(
+    proxyStatus?.baseUrl,
+    activeTrace?.projectName ?? null,
+    activeTrace?.traceId ?? null,
+  );
+  const selectedTraceSpansQuery = useSelectedTraceSpans(proxyStatus?.baseUrl, selectedTraces);
+  const selectedChildSpansByTraceId = useMemo(() => {
+    const spanGroups = selectedTraceSpansQuery.data ?? {};
+
+    return Object.keys(spanGroups).reduce<Record<string, typeof spanGroups[string]>>(
+      (accumulator, traceId) => {
+        accumulator[traceId] = (spanGroups[traceId] ?? []).filter(
+          (span: (typeof spanGroups)[string][number]) => Boolean(span.parentSpanId),
+        );
+        return accumulator;
+      },
+      {},
+    );
+  }, [selectedTraceSpansQuery.data]);
+  const selectedSpanCount = (() => {
+    return Object.keys(selectedChildSpansByTraceId).reduce(
+      (count, traceId) => count + (selectedChildSpansByTraceId[traceId]?.length ?? 0),
+      0,
+    );
+  })();
+  const chat = useChat(
+    activeProject,
+    selectedTraces,
+    selectedChildSpansByTraceId,
+  );
 
   const cycleTheme = async () => {
     const current = preferences?.theme ?? "system";
@@ -136,13 +181,12 @@ export default function App() {
     await setTheme(next);
   };
 
-  const themeIcon =
+  const ThemeIcon =
     preferences?.theme === "light"
       ? SunMedium
       : preferences?.theme === "dark"
         ? MoonStar
         : WandSparkles;
-  const ThemeIcon = themeIcon;
 
   const saveProject = async (input: ProjectInput, projectId?: string) => {
     try {
@@ -166,70 +210,26 @@ export default function App() {
   };
 
   const sidebar = (
-    <aside className="flex h-full min-h-0 flex-col rounded-[24px] bg-black/35 p-6 pt-16 backdrop-blur-xl xl:pt-18">
-      <div className="mb-8 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-300/80">
-          Observer
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">Phoenix trace workbench</h1>
-        <p className="text-sm leading-6 text-[color:var(--muted-foreground)]">
-          Poll traces, stream analysis chats, and trace the UI&apos;s own AI completions back into
-          Phoenix.
-        </p>
-      </div>
-
-      <ProjectSelector
-        projects={projects}
-        activeProjectId={preferences?.activeProjectId}
-        onSelect={(projectId) => void activateProject(projectId)}
-        onCreateProject={() => {
-          setSettingsProject(null);
-          setSettingsOpen(true);
-        }}
-        onEditProject={() => {
-          setSettingsProject(activeProject);
-          setSettingsOpen(true);
-        }}
-      />
-
-      <Separator className="my-6" />
-
-      <div className="space-y-4">
-        <ConnectionStatus phoenixUrl={activeProject?.phoenixUrl} proxyStatus={proxyStatus} />
-        <Card className="bg-white/3 py-0 shadow-none">
-          <CardContent className="space-y-3 p-4 text-sm text-[color:var(--muted-foreground)]">
-            <p>
-              Polling interval:{" "}
-              <span className="font-semibold text-[color:var(--foreground)]">
-                {activeProject?.tracePollingInterval ?? 5000} ms
-              </span>
-            </p>
-            <p>
-              Proxy base URL:{" "}
-              <span className="font-mono text-xs text-[color:var(--foreground)]">
-                {proxyStatus?.baseUrl ?? "inactive"}
-              </span>
-            </p>
-            <p>
-              Theme:{" "}
-              <span className="font-semibold text-[color:var(--foreground)]">
-                {preferences?.theme ?? "system"}
-              </span>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-auto flex items-center justify-between pt-6">
-        <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--muted-foreground)]">
-          renderer telemetry active
-        </div>
-        <Button size="sm" variant="outline" onClick={() => void cycleTheme()}>
-          <ThemeIcon className="mr-2 h-4 w-4" />
-          {preferences?.theme ?? "system"}
-        </Button>
-      </div>
-    </aside>
+    <AppSidebar
+      activeProject={activeProject}
+      activeProjectId={preferences?.activeProjectId}
+      onCreateProject={() => {
+        setSettingsProject(null);
+        setSettingsOpen(true);
+      }}
+      onCycleTheme={() => void cycleTheme()}
+      onEditProject={() => {
+        setSettingsProject(activeProject);
+        setSettingsOpen(true);
+      }}
+      onSelectProject={(projectId) => void activateProject(projectId)}
+      preferencesTheme={preferences?.theme}
+      projects={projects}
+      proxyStatus={proxyStatus}
+      telemetryExportUrl={telemetryExportUrl}
+      telemetryProjectName={telemetryProjectName}
+      themeIcon={<ThemeIcon className="mr-2 h-4 w-4" />}
+    />
   );
 
   const tracePanel = (
@@ -238,8 +238,10 @@ export default function App() {
         traces={filteredTraces}
         selectedTraceIds={selectedTraceIds}
         activeTraceId={activeTraceId}
-        isInitialLoading={isLoading || (tracesQuery.isPending && !tracesQuery.data)}
-        isRefreshing={tracesQuery.isFetching && Boolean(tracesQuery.data)}
+        isInitialLoading={isLoading || (tracesQuery.isPending && !tracePages?.pages.length)}
+        isRefreshing={tracesQuery.isRefetching && Boolean(tracePages?.pages.length)}
+        hasMore={Boolean(tracesQuery.hasNextPage && traceFilters.projectName !== "__all__")}
+        isFetchingNextPage={tracesQuery.isFetchingNextPage}
         error={tracesQuery.error instanceof Error ? tracesQuery.error.message : null}
         filters={traceFilters}
         phoenixProjectNames={phoenixProjectNamesQuery.data ?? []}
@@ -255,6 +257,7 @@ export default function App() {
             "Analyze the selected traces. Highlight the most important failures, latency patterns, and likely next debugging steps.",
           );
         }}
+        onLoadMore={() => void tracesQuery.fetchNextPage()}
         onRefresh={() => void tracesQuery.refetch()}
       />
     </div>
@@ -276,6 +279,9 @@ export default function App() {
         project={activeProject}
         messages={chat.messages}
         selectedTraceCount={selectedTraces.length}
+        selectedSpanCount={selectedSpanCount}
+        isContextLoading={selectedTraceSpansQuery.isFetching && selectedTraces.length > 0}
+        isPinned={chatPinned}
         isStreaming={chat.isStreaming}
         error={chat.error}
         onSend={chat.sendMessage}
@@ -283,89 +289,31 @@ export default function App() {
           chat.clear();
           clearSelection();
         }}
+        onTogglePinned={() => setChatPinned((value) => !value)}
       />
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(46,160,120,0.14),_transparent_34%),linear-gradient(180deg,_rgba(6,7,10,1),_rgba(3,4,6,1))] text-[color:var(--foreground)]">
-      <div className="flex min-h-screen flex-col xl:hidden">
-        <div className="p-4 pb-0 md:p-6 md:pb-0">{sidebar}</div>
-        <div className="grid gap-4 p-4 md:gap-6 md:p-6">
-          {tracePanel}
-          <div className="grid gap-4 md:gap-6">
-            {detailPanel}
-            {chatPanel}
-          </div>
-        </div>
-      </div>
+      <MobileAppLayout
+        sidebar={sidebar}
+        tracePanel={tracePanel}
+        detailPanel={detailPanel}
+        chatPanel={chatPanel}
+      />
 
-      <div className="hidden h-screen p-3 xl:block">
-        <ResizablePanelGroup
-          className="h-[calc(100vh-1.5rem)] gap-3"
-          defaultLayout={
-            rootLayout.defaultLayout ?? {
-              "observer-sidebar-panel": 320,
-              "observer-workspace-panel": 1,
-            }
-          }
-          id={layoutIds.root}
-          onLayoutChanged={rootLayout.onLayoutChanged}
-          orientation="horizontal"
-        >
-          <ResizablePanel
-            defaultSize="320px"
-            groupResizeBehavior="preserve-pixel-size"
-            id="observer-sidebar-panel"
-            maxSize="420px"
-            minSize="280px"
-          >
-            <div className="h-full min-h-0">{sidebar}</div>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={1} id="observer-workspace-panel" minSize="720px">
-            <ResizablePanelGroup
-              className="h-full gap-2"
-              defaultLayout={
-                mainLayout.defaultLayout ?? {
-                  "observer-traces-panel": 56,
-                  "observer-inspector-panel": 44,
-                }
-              }
-              id={layoutIds.main}
-              onLayoutChanged={mainLayout.onLayoutChanged}
-              orientation="horizontal"
-            >
-              <ResizablePanel defaultSize={56} id="observer-traces-panel" minSize={30}>
-                {tracePanel}
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={44} id="observer-inspector-panel" minSize={26}>
-                <ResizablePanelGroup
-                  className="h-full gap-2"
-                  defaultLayout={
-                    rightLayout.defaultLayout ?? {
-                      "observer-detail-panel": 46,
-                      "observer-chat-panel": 54,
-                    }
-                  }
-                  id={layoutIds.right}
-                  onLayoutChanged={rightLayout.onLayoutChanged}
-                  orientation="vertical"
-                >
-                  <ResizablePanel defaultSize={46} id="observer-detail-panel" minSize={24}>
-                    <div className="h-full min-h-0 overflow-hidden">{detailPanel}</div>
-                  </ResizablePanel>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={54} id="observer-chat-panel" minSize={28}>
-                    <div className="h-full min-h-0 overflow-hidden">{chatPanel}</div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+      <DesktopAppLayout
+        sidebar={sidebar}
+        tracePanel={tracePanel}
+        detailPanel={detailPanel}
+        isChatPinned={chatPinned}
+        chatPanel={chatPanel}
+        layoutIds={layoutIds}
+        pinnedLayout={pinnedLayout}
+        rootLayout={rootLayout}
+        unpinnedLayout={unpinnedLayout}
+      />
 
       <ConnectionSettings
         open={settingsOpen}

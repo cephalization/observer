@@ -1,12 +1,11 @@
 import { trace } from "@opentelemetry/api";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { WebTracerProvider } from "@opentelemetry/sdk-trace-web";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 
 import {
   OpenInferenceSimpleSpanProcessor,
-  isOpenInferenceSpan,
 } from "@arizeai/openinference-vercel";
 import { SEMRESATTRS_PROJECT_NAME } from "@arizeai/openinference-semantic-conventions";
 
@@ -35,7 +34,6 @@ export const initializeTracing = async (proxyBaseUrl: string, projectName: strin
         exporter: new OTLPTraceExporter({
           url: `${proxyBaseUrl}/v1/traces`,
         }),
-        spanFilter: isOpenInferenceSpan,
       }),
     ],
   });
@@ -44,3 +42,15 @@ export const initializeTracing = async (proxyBaseUrl: string, projectName: strin
 };
 
 export const getChatTracer = () => trace.getTracer("observer.chat");
+
+export const getTelemetryProjectName = (projectName: string) => {
+  const normalized = projectName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `observer-${normalized || "default"}`;
+};
+
+export const getTelemetryExportUrl = (baseUrl: string) => `${baseUrl}/v1/traces`;

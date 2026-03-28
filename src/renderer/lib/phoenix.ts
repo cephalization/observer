@@ -5,6 +5,11 @@ export interface PhoenixProjectSummary {
   name: string;
 }
 
+export interface TracePage {
+  nextCursor: string | null;
+  traces: TraceRecord[];
+}
+
 const fetchJson = async <T>(url: string) => {
   const response = await fetch(url);
 
@@ -106,6 +111,51 @@ const sortTraceRecords = (
   });
 };
 
+const getTimeRangeBounds = (timeRange: TraceFilters["timeRange"]) => {
+  if (timeRange === "all") {
+    return {};
+  }
+
+  const now = Date.now();
+  const offsets: Record<Exclude<TraceFilters["timeRange"], "all">, number> = {
+    "15m": 15 * 60 * 1000,
+    "1h": 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+  };
+
+  return {
+    end_time: new Date(now).toISOString(),
+    start_time: new Date(now - offsets[timeRange]).toISOString(),
+  };
+};
+
+const createTraceParams = (
+  filters?: Pick<TraceFilters, "order" | "sort" | "timeRange">,
+  cursor?: string,
+  limit = 50,
+) => {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    order: filters?.order ?? "desc",
+    sort: filters?.sort ?? "start_time",
+  });
+  const bounds = getTimeRangeBounds(filters?.timeRange ?? "24h");
+
+  if (bounds.start_time) {
+    params.set("start_time", bounds.start_time);
+  }
+  if (bounds.end_time) {
+    params.set("end_time", bounds.end_time);
+  }
+  if (cursor) {
+    params.set("cursor", cursor);
+  }
+
+  return params;
+};
+
 export const listPhoenixProjects = async (
   proxyBaseUrl: string,
 ): Promise<PhoenixProjectSummary[]> => {
@@ -121,24 +171,47 @@ export const listPhoenixProjects = async (
   }));
 };
 
-export const listTraces = async (
+export const listTracesPage = async (
   proxyBaseUrl: string,
-  selectedProjectName?: string,
-  filters?: Pick<TraceFilters, "sort" | "order">,
-) => {
+  selectedProjectName: string | undefined,
+  filters: Pick<TraceFilters, "sort" | "order" | "timeRange">,
+  cursor?: string,
+): Promise<TracePage> => {
   const projects = await listPhoenixProjects(proxyBaseUrl);
   const selectedProjects =
     selectedProjectName && projects.some((project) => project.name === selectedProjectName)
       ? projects.filter((project) => project.name === selectedProjectName)
       : projects;
 
+  if (selectedProjects.length === 0) {
+    return { nextCursor: null, traces: [] };
+  }
+
+  if (selectedProjects.length === 1) {
+    const project = selectedProjects[0];
+    const params = createTraceParams(filters, cursor, 50);
+    const payload = await fetchJson<{
+      data?: Array<Record<string, unknown>>;
+      next_cursor?: string | null;
+    }>(
+      `${proxyBaseUrl}/v1/projects/${encodeURIComponent(project.name)}/traces?${params.toString()}`,
+    );
+
+    return {
+      nextCursor: payload.next_cursor ?? null,
+      traces: (payload.data ?? []).map((trace) => {
+        const record = toTraceRecord(trace);
+        return {
+          ...record,
+          projectName: record.projectName ?? project.name,
+        };
+      }),
+    };
+  }
+
   const responses = await Promise.all(
     selectedProjects.map(async (project) => {
-      const params = new URLSearchParams({
-        limit: projects.length === 1 ? "50" : "20",
-        sort: filters?.sort ?? "start_time",
-        order: filters?.order ?? "desc",
-      });
+      const params = createTraceParams(filters, undefined, 20);
       const payload = await fetchJson<{ data?: Array<Record<string, unknown>> }>(
         `${proxyBaseUrl}/v1/projects/${encodeURIComponent(project.name)}/traces?${params.toString()}`,
       );
@@ -153,12 +226,16 @@ export const listTraces = async (
     }),
   );
 
-  const flattened = responses.reduce<TraceRecord[]>((all, traceGroup) => {
-    all.push(...traceGroup);
-    return all;
-  }, []);
-
-  return sortTraceRecords(flattened, filters).slice(0, 100);
+  return {
+    nextCursor: null,
+    traces: sortTraceRecords(
+      responses.reduce<TraceRecord[]>((all, traceGroup) => {
+        all.push(...traceGroup);
+        return all;
+      }, []),
+      filters,
+    ).slice(0, 100),
+  };
 };
 
 export const getTraceSpansForTrace = async (
@@ -167,7 +244,7 @@ export const getTraceSpansForTrace = async (
   traceId: string,
 ) => {
   const params = new URLSearchParams({
-    trace_ids: traceId,
+    trace_id: traceId,
     limit: "200",
   });
   const payload = await fetchJson<{ data?: Array<Record<string, unknown>> }>(

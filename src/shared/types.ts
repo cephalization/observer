@@ -79,6 +79,7 @@ export interface TraceFilters {
   status: "all" | "ok" | "error" | "unset";
   sort: "start_time" | "latency_ms";
   order: "asc" | "desc";
+  timeRange: "15m" | "1h" | "24h" | "7d" | "30d" | "all";
 }
 
 export interface ChatMessage {

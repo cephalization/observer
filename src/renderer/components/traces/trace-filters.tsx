@@ -70,5 +70,18 @@ export const TraceFiltersBar = ({
         <SelectItem value="asc">Ascending</SelectItem>
       </SelectContent>
     </Select>
+    <Select value={filters.timeRange} onValueChange={(value) => onChange({ ...filters, timeRange: value as TraceFilters["timeRange"] })}>
+      <SelectTrigger className="min-w-[10rem] flex-1 basis-[10rem]">
+        <SelectValue placeholder="Time range" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="15m">Last 15 min</SelectItem>
+        <SelectItem value="1h">Last hour</SelectItem>
+        <SelectItem value="24h">Last 24 hours</SelectItem>
+        <SelectItem value="7d">Last 7 days</SelectItem>
+        <SelectItem value="30d">Last 30 days</SelectItem>
+        <SelectItem value="all">All time</SelectItem>
+      </SelectContent>
+    </Select>
   </div>
 );

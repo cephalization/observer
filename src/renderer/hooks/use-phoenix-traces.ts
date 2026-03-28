@@ -1,14 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
-import type { Project, TraceFilters } from "../../shared/types";
-import { getTraceSpansForTrace, listPhoenixProjects, listTraces } from "../lib/phoenix";
+import type { Project, SpanRecord, TraceFilters, TraceRecord } from "../../shared/types";
+import type { TracePage } from "../lib/phoenix";
+import { getTraceSpansForTrace, listPhoenixProjects, listTracesPage } from "../lib/phoenix";
 
 export const usePhoenixTraces = (
   project: Project | null,
   proxyBaseUrl: string | null | undefined,
-  filters: Pick<TraceFilters, "projectName" | "sort" | "order">,
+  filters: Pick<TraceFilters, "projectName" | "sort" | "order" | "timeRange">,
 ) =>
-  useQuery({
+  useInfiniteQuery({
     queryKey: [
       "phoenix-traces",
       project?.id,
@@ -16,17 +17,19 @@ export const usePhoenixTraces = (
       filters.projectName,
       filters.sort,
       filters.order,
+      filters.timeRange,
     ],
     enabled: Boolean(project && proxyBaseUrl),
-    queryFn: () =>
-      listTraces(
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }: { pageParam: string | null }) =>
+      listTracesPage(
         proxyBaseUrl as string,
         filters.projectName === "__all__" ? undefined : filters.projectName,
         filters,
+        pageParam ?? undefined,
       ),
-    placeholderData: (previousData: Awaited<ReturnType<typeof listTraces>> | undefined) =>
-      previousData,
-    refetchInterval: project?.tracePollingInterval ?? 5000,
+    getNextPageParam: (lastPage: TracePage) => lastPage.nextCursor ?? undefined,
+    staleTime: 5_000,
   });
 
 export const usePhoenixProjectNames = (proxyBaseUrl: string | null | undefined) =>
@@ -41,13 +44,46 @@ export const usePhoenixProjectNames = (proxyBaseUrl: string | null | undefined) 
   });
 
 export const useTraceSpans = (
-  project: Project | null,
   proxyBaseUrl: string | null | undefined,
+  projectName: string | null,
   traceId: string | null,
 ) =>
   useQuery({
-    queryKey: ["trace-spans", project?.id, traceId, proxyBaseUrl],
-    enabled: Boolean(project && proxyBaseUrl && traceId),
+    queryKey: ["trace-spans", projectName, traceId, proxyBaseUrl],
+    enabled: Boolean(projectName && proxyBaseUrl && traceId),
     queryFn: () =>
-      getTraceSpansForTrace(proxyBaseUrl as string, project?.name as string, traceId as string),
+      getTraceSpansForTrace(proxyBaseUrl as string, projectName as string, traceId as string),
+  });
+
+export const useSelectedTraceSpans = (
+  proxyBaseUrl: string | null | undefined,
+  traces: TraceRecord[],
+) =>
+  useQuery({
+    queryKey: [
+      "selected-trace-spans",
+      proxyBaseUrl,
+      traces.map((trace) => `${trace.projectName ?? "unknown"}:${trace.traceId}`).sort(),
+    ],
+    enabled: Boolean(proxyBaseUrl && traces.length > 0),
+    queryFn: async () => {
+      const entries = await Promise.all(
+        traces
+          .filter((trace) => Boolean(trace.projectName))
+          .map(async (trace) => {
+            const spans = await getTraceSpansForTrace(
+              proxyBaseUrl as string,
+              trace.projectName as string,
+              trace.traceId,
+            );
+
+            return [trace.traceId, spans] as const;
+          }),
+      );
+
+      return entries.reduce<Record<string, SpanRecord[]>>((accumulator, [traceId, spans]) => {
+        accumulator[traceId] = spans;
+        return accumulator;
+      }, {});
+    },
   });

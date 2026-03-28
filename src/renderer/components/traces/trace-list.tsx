@@ -18,6 +18,8 @@ export const TraceList = ({
   activeTraceId,
   isInitialLoading,
   isRefreshing,
+  hasMore,
+  isFetchingNextPage,
   error,
   filters,
   phoenixProjectNames,
@@ -25,6 +27,7 @@ export const TraceList = ({
   onToggleTrace,
   onOpenTrace,
   onAnalyze,
+  onLoadMore,
   onRefresh,
 }: {
   traces: TraceRecord[];
@@ -32,6 +35,8 @@ export const TraceList = ({
   activeTraceId: string | null;
   isInitialLoading: boolean;
   isRefreshing: boolean;
+  hasMore: boolean;
+  isFetchingNextPage: boolean;
   error?: string | null;
   filters: TraceFilters;
   phoenixProjectNames: string[];
@@ -39,6 +44,7 @@ export const TraceList = ({
   onToggleTrace: (traceId: string) => void;
   onOpenTrace: (traceId: string) => void;
   onAnalyze: () => void;
+  onLoadMore: () => void;
   onRefresh: () => void;
 }) => (
   <Card className="flex h-full min-h-0 flex-col overflow-hidden py-4">
@@ -53,7 +59,7 @@ export const TraceList = ({
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onRefresh}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+            {isRefreshing ? "Refreshing..." : "Refresh"}
           </Button>
           <Button size="sm" onClick={onAnalyze} disabled={selectedTraceIds.length === 0}>
             Analyze {selectedTraceIds.length > 0 ? `(${selectedTraceIds.length})` : ""}
@@ -115,6 +121,13 @@ export const TraceList = ({
         {!isInitialLoading && traces.length === 0 ? (
           <div className="px-6 py-10 text-center text-sm text-muted-foreground">
             No traces match the current filters. Try changing the sort, status, or search query.
+          </div>
+        ) : null}
+        {hasMore ? (
+          <div className="flex justify-center border-t border-white/6 px-6 py-4">
+            <Button size="sm" variant="outline" onClick={onLoadMore}>
+              {isFetchingNextPage ? "Loading more..." : "Load more traces"}
+            </Button>
           </div>
         ) : null}
       </div>

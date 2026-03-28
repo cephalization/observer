@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { streamText } from "ai";
 
-import type { ChatMessage, Project, TraceRecord } from "../../shared/types";
+import type { ChatMessage, Project, SpanRecord, TraceRecord } from "../../shared/types";
 import { createLanguageModel } from "../lib/ai";
 import { getChatTracer } from "../lib/otel";
 
@@ -12,13 +12,29 @@ const createMessage = (role: ChatMessage["role"], content: string): ChatMessage 
   content,
 });
 
-const buildTraceContext = (traces: TraceRecord[]) => {
+const serializeSpan = (span: SpanRecord) => ({
+  attributes: span.attributes,
+  durationMs: span.durationMs,
+  events: span.events,
+  name: span.name,
+  parentSpanId: span.parentSpanId,
+  spanId: span.spanId,
+  spanKind: span.spanKind,
+  statusCode: span.statusCode,
+  statusMessage: span.statusMessage,
+});
+
+const buildTraceContext = (
+  traces: TraceRecord[],
+  selectedTraceSpansByTraceId: Record<string, SpanRecord[]>,
+) => {
   if (traces.length === 0) {
     return "No Phoenix traces are currently selected.";
   }
 
   return JSON.stringify(
     traces.map((trace) => ({
+      childSpans: (selectedTraceSpansByTraceId[trace.traceId] ?? []).map(serializeSpan),
       traceId: trace.traceId,
       projectName: trace.projectName,
       statusCode: trace.statusCode,
@@ -33,7 +49,11 @@ const buildTraceContext = (traces: TraceRecord[]) => {
   );
 };
 
-export const useChat = (project: Project | null, selectedTraces: TraceRecord[]) => {
+export const useChat = (
+  project: Project | null,
+  selectedTraces: TraceRecord[],
+  selectedTraceSpansByTraceId: Record<string, SpanRecord[]>,
+) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +87,7 @@ export const useChat = (project: Project | null, selectedTraces: TraceRecord[]) 
           "You are Observer, an assistant that analyzes Phoenix traces.",
           "Be concise, technical, and action-oriented.",
           `Selected trace ids: ${selectedTraceIds.join(", ") || "none"}`,
-          buildTraceContext(selectedTraces),
+          buildTraceContext(selectedTraces, selectedTraceSpansByTraceId),
         ].join("\n\n"),
         messages: priorMessages.map((message) => ({
           role: message.role,
