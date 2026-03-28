@@ -171,6 +171,38 @@ Code reference:
 
 - [`src/renderer/lib/otel.ts`](src/renderer/lib/otel.ts)
 
+### 8. Install the tracing dependencies you actually need
+
+For Vercel AI SDK -> Phoenix tracing in a browser or Electron renderer, the core packages in this app are:
+
+- `ai`
+- `@ai-sdk/openai` or `@ai-sdk/anthropic`
+- `@opentelemetry/api`
+- `@opentelemetry/sdk-trace-web`
+- `@opentelemetry/exporter-trace-otlp-proto`
+- `@opentelemetry/resources`
+- `@opentelemetry/semantic-conventions`
+- `@arizeai/openinference-semantic-conventions`
+- `@arizeai/openinference-vercel`
+
+Install the AI SDK packages with:
+
+```bash
+npm install ai @ai-sdk/openai
+```
+
+Install the OTEL + OpenInference packages with:
+
+```bash
+npm install @opentelemetry/api @opentelemetry/sdk-trace-web @opentelemetry/exporter-trace-otlp-proto @opentelemetry/resources @opentelemetry/semantic-conventions @arizeai/openinference-semantic-conventions @arizeai/openinference-vercel
+```
+
+In short:
+
+- AI SDK provides the traced model call surface
+- browser OTEL provides the tracer provider and exporter
+- OpenInference provides Phoenix-compatible AI span semantics
+
 ## Tutorial: tracing from an Electron renderer into Phoenix
 
 This section maps the important steps directly to the code in this repo.
